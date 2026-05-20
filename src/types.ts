@@ -19,12 +19,22 @@ export type Block = {
 
 export type SceneObject = {
   id: string;
-  type: string;
+  type: 'quantity' | 'relation_label' | 'point' | 'segment' | 'polygon' | 'formula' | 'cell' | 'molecule' | 'atom' | 'chemical_element' | 'node' | string;
   label: string;
   value?: number;
   x?: number;
   y?: number;
+  z?: number;
+  width?: number;
+  height?: number;
+  radius?: number;
+  points?: { x: number; y: number; label?: string }[];
+  symbol?: string;
+  formula?: string;
+  charge?: string;
+  state?: string;
   color?: string;
+  metadata?: Record<string, unknown>;
 };
 
 export type SceneVariable = {
@@ -56,6 +66,7 @@ export type SceneEvent = {
 export type SceneSpec = {
   scene_id: string;
   domain: string;
+  engine?: '2d' | '3d' | 'hybrid';
   stage_goal: string;
   model_limitations: string[];
   objects: SceneObject[];
@@ -71,4 +82,3 @@ export type ChatMessage = {
   content: string;
   source?: string;
 };
-

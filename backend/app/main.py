@@ -94,7 +94,10 @@ Objetivo da etapa: {payload.stage_goal}
 Schema obrigatorio:
 scene_id, domain, stage_goal, model_limitations[], objects[], variables[], relations[], invariants[],
 construction_events[], click_explanations{{}}.
-Use apenas tipos simples: quantity, point, node, relation_label, expression, graph_marker.
+Use objetos padronizados para o motor modular. Tipos aceitos no MVP:
+quantity, relation_label, point, segment, polygon, formula, cell, molecule, atom, chemical_element, node.
+Campos opcionais por objeto: x, y, width, height, radius, points[], symbol, formula, charge, state, metadata.
+Use x/y/width/height em porcentagem do canvas e evite sobreposicao inicial.
 Eventos permitidos: create_object, set_property, connect, disconnect, transform, highlight_invariant,
 add_variable_control, simulate_step, remove_object, compare_states.
 Inclua posicoes x/y percentuais nos objetos quando fizer sentido.

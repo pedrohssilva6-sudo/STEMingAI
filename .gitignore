@@ -3,6 +3,7 @@ dist/
 *.tsbuildinfo
 .env
 .venv/
+imgsforagent/
 __pycache__/
 *.pyc
 .pytest_cache/

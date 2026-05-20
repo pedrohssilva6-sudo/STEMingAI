@@ -28,7 +28,11 @@ GCP_LOCATION="us-central1"
 GCP_SERVICE_ACCOUNT_JSON='{"type": "service_account", ...}'
 VERTEX_FAST_MODEL="gemini-2.5-flash-lite"
 VERTEX_DEEP_MODEL="gemini-2.5-pro"
+VITE_SUPABASE_URL="https://tydtxkngmtkzpigenvwp.supabase.co"
+VITE_SUPABASE_PUBLISHABLE_KEY="sb_publishable_Bwu_auaTtXHQmhnTVIXFGw_YKpD795n"
 ```
+
+Para habilitar persistencia remota de blocos, execute o SQL em `supabase/schema.sql` no SQL Editor do Supabase. Se a tabela ainda nao existir, o app cai automaticamente para `localStorage`.
 
 ## Deploy em um unico Web Service no Render
 
