@@ -32,6 +32,11 @@ Primitivas iniciais:
 - `molecule`
 - `cell`
 - `relation_label`
+- `text`
+- `symbol`
+- `vector`
+- `solid_3d`
+- `surface_3d`
 
 ## 3. Kits de dominio
 
@@ -86,6 +91,18 @@ A interacao atual suporta:
 - ativar/desativar relacao proporcional;
 - avançar/voltar/reconstruir eventos.
 
+## 7.1. Renderizacao hibrida
+
+O renderer atual suporta 2D e 3D projetado em SVG:
+
+- `text`: textos explicativos dentro da cena.
+- `symbol`: simbolos matematicos, fisicos ou quimicos.
+- `vector`: grandezas orientadas.
+- `solid_3d`: solidos/volumes com profundidade simplificada.
+- `surface_3d`: superficies/campos/membranas/orbitais esquematicos.
+
+Isso ainda nao substitui um motor WebGL/Three.js, mas ja permite que a IA combine representacoes 2D, 3D simplificadas, formulas, textos e simbolos em uma mesma `SceneSpec`.
+
 ## 8. Expansao
 
 Proximos motores devem entrar como modulos, sem mudar a IA:
@@ -100,4 +117,3 @@ Proximos motores devem entrar como modulos, sem mudar a IA:
 - `threeDEngine`
 
 Cada motor deve receber a mesma `SceneSpec v1` e declarar quais tipos, relacoes, constraints e operations executa.
-

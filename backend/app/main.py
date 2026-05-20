@@ -100,10 +100,11 @@ Schema obrigatorio:
 scene_id, version, domain, engine, stage_goal, model_limitations[], objects[], variables[], relations[],
 constraints[], operations[], invariants[], construction_events[], click_explanations{{}}.
 Use objetos padronizados para o motor modular. Tipos aceitos no MVP:
-quantity, relation_label, point, segment, polygon, formula, cell, molecule, atom, chemical_element, node.
-Cada objeto deve ter obrigatoriamente id, type e label. Campos opcionais por objeto: x, y, width, height, radius, points[], symbol, formula, charge, state, metadata.
+quantity, relation_label, point, segment, polygon, formula, cell, molecule, atom, chemical_element, node, text, symbol, vector, solid_3d, surface_3d.
+Cada objeto deve ter obrigatoriamente id, type e label. Campos opcionais por objeto: x, y, z, width, height, depth, radius, rotation, points[], vertices[], symbol, text, formula, charge, state, metadata.
 Use x/y/width/height em porcentagem do canvas e evite sobreposicao inicial.
-Engines aceitos: geometry, graph, symbolic, physics, chemistry, biology, statistics, timeline.
+Engines aceitos: geometry, graph, symbolic, physics, chemistry, biology, statistics, timeline, 3d, hybrid.
+Use engine="hybrid" quando a cena combinar elementos 2D, 3D projetado, textos, formulas e simbolos. Use solid_3d/surface_3d para estruturas macro, orbitais, superficies, corpos, volumes, membranas ou geometrias espaciais simplificadas.
 Relacoes aceitas: proportionality, dependency, chemical_bond, force, field, flow, edge, contains, equivalence, correspondence.
 Constraints declaram hipoteses do modelo. Operations declaram transformacoes manipulaveis pelo usuario.
 Eventos permitidos: create_object, set_property, connect, disconnect, transform, highlight_invariant,
@@ -153,7 +154,7 @@ Actions permitidas:
 - remove_relation: {{"type":"remove_relation","id":"relacao"}}
 - set_variable: {{"type":"set_variable","id":"variavel","value":numero}}
 - replace_scene: {{"type":"replace_scene","scene":{{SceneSpec v1 completo}}}}
-SceneObject em actions tambem deve usar os tipos aceitos e conter id, type, label, x e y. Se quiser representar organela, use type="cell" com label da organela e metadata.kind="organelle".
+SceneObject em actions tambem deve usar os tipos aceitos e conter id, type, label, x e y. Se quiser representar organela, use type="cell" com label da organela e metadata.kind="organelle". Se o usuario pedir 3D, use solid_3d, surface_3d, atom ou molecule com depth/z/rotation quando fizer sentido.
 Nao repita mensagens prontas. Responda ao pedido especifico e considere selected_id, variables e relation_active.
 """
     try:

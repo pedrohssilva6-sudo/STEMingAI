@@ -21,7 +21,24 @@ export type Block = {
 
 export type SceneObject = {
   id: string;
-  type: 'quantity' | 'relation_label' | 'point' | 'segment' | 'polygon' | 'formula' | 'cell' | 'molecule' | 'atom' | 'chemical_element' | 'node' | string;
+  type:
+    | 'quantity'
+    | 'relation_label'
+    | 'point'
+    | 'segment'
+    | 'polygon'
+    | 'formula'
+    | 'cell'
+    | 'molecule'
+    | 'atom'
+    | 'chemical_element'
+    | 'node'
+    | 'text'
+    | 'symbol'
+    | 'vector'
+    | 'solid_3d'
+    | 'surface_3d'
+    | string;
   label: string;
   value?: number;
   x?: number;
@@ -30,8 +47,12 @@ export type SceneObject = {
   width?: number;
   height?: number;
   radius?: number;
+  depth?: number;
+  rotation?: { x?: number; y?: number; z?: number };
   points?: { x: number; y: number; label?: string }[];
+  vertices?: { x: number; y: number; z?: number; label?: string }[];
   symbol?: string;
+  text?: string;
   formula?: string;
   charge?: string;
   state?: string;

@@ -37,6 +37,7 @@ function normalizeScene(scene: SceneSpec): SceneSpec {
     model_limitations: scene.model_limitations ?? ['Modelo gerado pela IA; conferir idealizacoes antes de usar como representacao quantitativa.'],
     objects: (scene.objects ?? []).map((object) => ({
       ...object,
+      type: object.type === 'organelle' ? 'cell' : object.type,
       label: object.label ?? String(object.metadata?.name ?? object.metadata?.text ?? object.id)
     })),
     variables: scene.variables ?? [],

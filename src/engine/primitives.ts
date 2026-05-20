@@ -59,6 +59,41 @@ export const UNIVERSAL_PRIMITIVES: PrimitiveDefinition[] = [
     interaction: { draggable: true, connectable: true, inspectable: true, measurable: false }
   },
   {
+    type: 'text',
+    label: 'Texto',
+    domains: ['universal'],
+    defaultSize: { width: 24, height: 8 },
+    interaction: { draggable: true, connectable: false, inspectable: true, measurable: false }
+  },
+  {
+    type: 'symbol',
+    label: 'Simbolo',
+    domains: ['mathematics', 'physics', 'chemistry', 'universal'],
+    defaultSize: { width: 12, height: 12 },
+    interaction: { draggable: true, connectable: true, inspectable: true, measurable: false }
+  },
+  {
+    type: 'vector',
+    label: 'Vetor',
+    domains: ['mathematics', 'physics'],
+    defaultSize: { width: 20, height: 8 },
+    interaction: { draggable: true, connectable: true, inspectable: true, measurable: true }
+  },
+  {
+    type: 'solid_3d',
+    label: 'Solido 3D',
+    domains: ['mathematics', 'physics', 'chemistry', 'biology'],
+    defaultSize: { width: 18, height: 16 },
+    interaction: { draggable: true, connectable: true, inspectable: true, measurable: true }
+  },
+  {
+    type: 'surface_3d',
+    label: 'Superficie 3D',
+    domains: ['mathematics', 'physics', 'biology'],
+    defaultSize: { width: 22, height: 14 },
+    interaction: { draggable: true, connectable: true, inspectable: true, measurable: true }
+  },
+  {
     type: 'atom',
     label: 'Atomo',
     domains: ['chemistry', 'physics'],
@@ -102,4 +137,3 @@ export const primitiveByType = new Map(UNIVERSAL_PRIMITIVES.map((primitive) => [
 export function primitiveFor(type: string) {
   return primitiveByType.get(type) ?? primitiveByType.get('node')!;
 }
-

@@ -65,6 +65,61 @@ export function RenderSceneObject({ object, selected, dragging, label, onPointer
     );
   }
 
+  if (object.type === 'text') {
+    return (
+      <g key={object.id} {...common}>
+        <rect x={x} y={y} width={Math.max(width, 18)} height={height} rx="2.5" fill="rgba(15,23,42,.72)" stroke={color} strokeDasharray="1.4 1.2" />
+        <text x={x + Math.max(width, 18) / 2} y={y + height / 2 + 1.5} textAnchor="middle">{object.text ?? label}</text>
+      </g>
+    );
+  }
+
+  if (object.type === 'symbol') {
+    return (
+      <g key={object.id} {...common}>
+        <circle cx={x + width / 2} cy={y + height / 2} r={Math.min(width, height) / 2} fill="#0f172a" stroke={color} strokeWidth=".8" />
+        <text x={x + width / 2} y={y + height / 2 + 1.7} textAnchor="middle" className="large-symbol">{object.symbol ?? object.text ?? label}</text>
+      </g>
+    );
+  }
+
+  if (object.type === 'vector') {
+    return (
+      <g key={object.id} {...common}>
+        <line x1={x} y1={y + height / 2} x2={x + width} y2={y + height / 2} stroke={color} strokeWidth="1.2" markerEnd="url(#arrow)" />
+        <text x={x + width / 2} y={y - 2} textAnchor="middle">{label}</text>
+      </g>
+    );
+  }
+
+  if (object.type === 'solid_3d') {
+    const depth = object.depth ?? 5;
+    const dx = depth * 0.7;
+    const dy = -depth * 0.55;
+    return (
+      <g key={object.id} {...common} className={`${common.className} pseudo-3d`}>
+        <polygon points={`${x},${y} ${x + width},${y} ${x + width + dx},${y + dy} ${x + dx},${y + dy}`} fill={color} opacity=".58" />
+        <polygon points={`${x + width},${y} ${x + width},${y + height} ${x + width + dx},${y + height + dy} ${x + width + dx},${y + dy}`} fill={color} opacity=".36" />
+        <rect x={x} y={y} width={width} height={height} rx="1.8" fill={color} opacity=".74" />
+        <polyline points={`${x},${y} ${x + dx},${y + dy} ${x + width + dx},${y + dy} ${x + width},${y}`} fill="none" stroke="#e0f2fe" strokeWidth=".35" />
+        <text x={x + width / 2} y={y - 3} textAnchor="middle">{label}</text>
+      </g>
+    );
+  }
+
+  if (object.type === 'surface_3d') {
+    const top = y + height * 0.25;
+    const mid = y + height * 0.55;
+    const bottom = y + height * 0.85;
+    return (
+      <g key={object.id} {...common} className={`${common.className} pseudo-3d`}>
+        <path d={`M ${x} ${mid} C ${x + width * .25} ${top}, ${x + width * .55} ${bottom}, ${x + width} ${mid}`} fill="none" stroke={color} strokeWidth="1.2" />
+        <path d={`M ${x} ${bottom} C ${x + width * .28} ${mid}, ${x + width * .62} ${top}, ${x + width} ${bottom}`} fill="none" stroke="#e0f2fe" strokeWidth=".45" opacity=".7" />
+        <text x={x + width / 2} y={y - 2} textAnchor="middle">{label}</text>
+      </g>
+    );
+  }
+
   if (object.type === 'polygon' && object.points?.length) {
     const points = object.points.map((point) => `${x + point.x},${y + point.y}`).join(' ');
     return (
@@ -100,4 +155,3 @@ export function RenderSceneObject({ object, selected, dragging, label, onPointer
     </g>
   );
 }
-

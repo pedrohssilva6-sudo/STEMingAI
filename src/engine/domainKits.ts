@@ -13,7 +13,7 @@ export const DOMAIN_KITS: DomainKit[] = [
     id: 'mathematics',
     label: 'Matematica',
     engines: ['geometry', 'symbolic', 'statistics', 'graph'],
-    objectTypes: ['quantity', 'point', 'segment', 'polygon', 'formula', 'node', 'relation_label'],
+    objectTypes: ['quantity', 'point', 'segment', 'polygon', 'formula', 'node', 'relation_label', 'text', 'symbol', 'vector', 'solid_3d', 'surface_3d'],
     relationTypes: ['proportionality', 'equivalence', 'dependency', 'correspondence'],
     operations: ['scale', 'translate', 'rotate', 'measure', 'transform'],
     invariants: ['ratio', 'area', 'angle', 'equivalence', 'sum']
@@ -22,7 +22,7 @@ export const DOMAIN_KITS: DomainKit[] = [
     id: 'physics',
     label: 'Fisica',
     engines: ['physics', 'geometry', 'timeline'],
-    objectTypes: ['quantity', 'point', 'segment', 'formula', 'node'],
+    objectTypes: ['quantity', 'point', 'segment', 'formula', 'node', 'vector', 'symbol', 'solid_3d', 'surface_3d', 'text'],
     relationTypes: ['force', 'field', 'dependency', 'flow'],
     operations: ['step', 'measure', 'transform', 'bind'],
     invariants: ['energy_idealized', 'momentum_idealized', 'charge', 'mass']
@@ -31,7 +31,7 @@ export const DOMAIN_KITS: DomainKit[] = [
     id: 'chemistry',
     label: 'Quimica',
     engines: ['chemistry', 'geometry', 'timeline'],
-    objectTypes: ['atom', 'chemical_element', 'molecule', 'quantity', 'formula', 'relation_label'],
+    objectTypes: ['atom', 'chemical_element', 'molecule', 'quantity', 'formula', 'relation_label', 'symbol', 'text', 'solid_3d'],
     relationTypes: ['chemical_bond', 'dependency', 'equivalence', 'flow'],
     operations: ['bind', 'unbind', 'measure', 'transform'],
     invariants: ['atom_count', 'charge', 'mass_idealized']
@@ -40,7 +40,7 @@ export const DOMAIN_KITS: DomainKit[] = [
     id: 'biology',
     label: 'Biologia',
     engines: ['biology', 'graph', 'timeline'],
-    objectTypes: ['cell', 'node', 'quantity', 'formula', 'molecule'],
+    objectTypes: ['cell', 'node', 'quantity', 'formula', 'molecule', 'text', 'symbol', 'surface_3d', 'solid_3d'],
     relationTypes: ['flow', 'contains', 'dependency', 'edge'],
     operations: ['step', 'bind', 'measure', 'transform'],
     invariants: ['homeostasis_range', 'conservation', 'network_structure']
@@ -49,7 +49,7 @@ export const DOMAIN_KITS: DomainKit[] = [
     id: 'computing',
     label: 'Computacao',
     engines: ['graph', 'timeline', 'symbolic'],
-    objectTypes: ['node', 'formula', 'quantity', 'relation_label'],
+    objectTypes: ['node', 'formula', 'quantity', 'relation_label', 'text', 'symbol'],
     relationTypes: ['edge', 'dependency', 'contains', 'correspondence'],
     operations: ['step', 'bind', 'transform'],
     invariants: ['state', 'ordering', 'complexity_class']
@@ -58,7 +58,7 @@ export const DOMAIN_KITS: DomainKit[] = [
     id: 'statistics',
     label: 'Estatistica',
     engines: ['statistics', 'graph'],
-    objectTypes: ['quantity', 'node', 'formula', 'relation_label'],
+    objectTypes: ['quantity', 'node', 'formula', 'relation_label', 'text', 'symbol'],
     relationTypes: ['dependency', 'correspondence', 'flow'],
     operations: ['measure', 'step', 'transform'],
     invariants: ['sample_size', 'total_frequency', 'mean_relation']
@@ -69,4 +69,3 @@ export function kitForDomain(domain: string) {
   const normalized = domain.toLowerCase();
   return DOMAIN_KITS.find((kit) => normalized.includes(kit.id) || normalized.includes(kit.label.toLowerCase())) ?? DOMAIN_KITS[0];
 }
-
