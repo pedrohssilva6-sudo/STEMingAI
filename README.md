@@ -30,6 +30,24 @@ VERTEX_FAST_MODEL="gemini-2.5-flash-lite"
 VERTEX_DEEP_MODEL="gemini-2.5-pro"
 ```
 
+## Deploy em um unico Web Service no Render
+
+Use **Web Service**. O FastAPI serve a API e tambem os arquivos gerados em `dist/`.
+
+Build command:
+
+```bash
+npm install && npm run build && pip install -r backend/requirements.txt
+```
+
+Start command:
+
+```bash
+uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT
+```
+
+Configure no Render as variaveis de ambiente do Vertex AI listadas acima.
+
 ## Rodar localmente
 
 Frontend:
@@ -68,4 +86,3 @@ git commit -m "Initial STEMingAI prototype"
 git remote add origin <repo>
 git push -u origin main
 ```
-

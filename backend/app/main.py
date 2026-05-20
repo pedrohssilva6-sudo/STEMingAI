@@ -2,9 +2,12 @@ from __future__ import annotations
 
 import json
 import logging
+from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -20,6 +23,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+ROOT_DIR = Path(__file__).resolve().parents[2]
+DIST_DIR = ROOT_DIR / "dist"
 
 SYSTEM_SCOPE = """
 Voce e o tutor estrutural do STEMingAI. Ensine matematica, ciencias naturais e computacao por objetos,
@@ -168,3 +174,17 @@ Critério: deve mencionar dependencia B = k*A, razao B/A e condicao de a relacao
             "source": "fallback",
         }
 
+
+if DIST_DIR.exists():
+    assets_dir = DIST_DIR / "assets"
+    if assets_dir.exists():
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    def serve_frontend(full_path: str):
+        if full_path.startswith("api/"):
+            raise HTTPException(status_code=404, detail="API route not found")
+        target = DIST_DIR / full_path
+        if target.is_file():
+            return FileResponse(target)
+        return FileResponse(DIST_DIR / "index.html")
