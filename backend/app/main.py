@@ -96,24 +96,36 @@ Gere uma SceneSpec v1 para renderizacao deterministica no frontend.
 Assunto: {payload.topic}
 Etapa: {payload.stage_title}
 Objetivo da etapa: {payload.stage_goal}
+
+Siga RIGOROSAMENTE o schema JSON. Certifique-se de que todas as virgulas estao nos lugares corretos e que nao ha virgulas sobrando no final de listas ou objetos.
+
 Schema obrigatorio:
-scene_id, version, domain, engine, stage_goal, model_limitations[], objects[], variables[], relations[],
-constraints[], operations[], invariants[], construction_events[], click_explanations{{}}.
-Use objetos padronizados para o motor modular. Tipos aceitos no MVP:
-quantity, relation_label, point, segment, polygon, formula, cell, molecule, atom, chemical_element, node, text, symbol, vector, solid_3d, surface_3d.
-Cada objeto deve ter obrigatoriamente id, type e label. Campos opcionais por objeto: x, y, z, width, height, depth, radius, rotation, points[], vertices[], symbol, text, formula, charge, state, metadata.
-Use x/y/width/height em porcentagem do canvas e evite sobreposicao inicial.
-Engines aceitos: geometry, graph, symbolic, physics, chemistry, biology, statistics, timeline, 3d, hybrid.
-Use engine="hybrid" quando a cena combinar elementos 2D, 3D projetado, textos, formulas e simbolos. Use solid_3d/surface_3d para estruturas macro, orbitais, superficies, corpos, volumes, membranas ou geometrias espaciais simplificadas.
-Relacoes aceitas: proportionality, dependency, chemical_bond, force, field, flow, edge, contains, equivalence, correspondence.
-Constraints declaram hipoteses do modelo. Operations declaram transformacoes manipulaveis pelo usuario.
-Eventos permitidos: create_object, set_property, connect, disconnect, transform, highlight_invariant,
-add_variable_control, simulate_step, remove_object, compare_states.
-Inclua posicoes x/y percentuais nos objetos quando fizer sentido.
-Retorne somente JSON.
+{{
+  "scene_id": "string",
+  "version": "1.0",
+  "domain": "string",
+  "engine": "hybrid",
+  "stage_goal": "string",
+  "model_limitations": ["string"],
+  "objects": [
+    {{ "id": "A", "type": "atom", "label": "H", "x": 40, "y": 50, "metadata": {{}} }}
+  ],
+  "variables": [],
+  "relations": [],
+  "constraints": [],
+  "operations": [],
+  "invariants": [],
+  "construction_events": [],
+  "click_explanations": {{}}
+}}
+
+Use objetos padronizados: quantity, relation_label, point, segment, polygon, formula, cell, molecule, atom, chemical_element, node, text, symbol, vector, solid_3d, surface_3d.
+Cada objeto deve ter obrigatoriamente id, type e label.
+Use x/y em porcentagem (0-100).
+Retorne SOMENTE o JSON puro, sem markdown e sem textos adicionais.
 """
     try:
-        raw = invoke_text(prompt, deep=True, temperature=0.15, max_tokens=5200)
+        raw = invoke_text(prompt, deep=True, temperature=0.1, max_tokens=5200)
         try:
             scene = extract_json(raw)
         except Exception:

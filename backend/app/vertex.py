@@ -93,5 +93,5 @@ Retorne somente JSON valido, sem markdown e sem explicacao.
 Conteudo a corrigir:
 {text}
 """
-    repaired = invoke_text(prompt, deep=False, temperature=0, max_tokens=5000)
+    repaired = invoke_text(prompt, deep=True, temperature=0, max_tokens=5000)
     return extract_json(repaired)
