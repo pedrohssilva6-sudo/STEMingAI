@@ -30,7 +30,9 @@ DEMO_STAGES = [
 
 DEMO_SCENE: dict[str, Any] = {
     "scene_id": "proporcao_escala_intro",
+    "version": "1.0",
     "domain": "matematica",
+    "engine": "geometry",
     "stage_goal": "Entender proporcao como conservacao de uma razao sob variacao de escala.",
     "model_limitations": [
         "Modelo bidimensional simples.",
@@ -48,6 +50,24 @@ DEMO_SCENE: dict[str, Any] = {
     ],
     "relations": [
         {"id": "r1", "type": "proportionality", "label": "B = k * A", "from": "A", "to": "B", "rule": "B.value = k * A.value"}
+    ],
+    "constraints": [
+        {
+            "id": "c1",
+            "type": "dependency",
+            "targets": ["A", "B"],
+            "expression": "B.value = k * A.value",
+            "description": "B acompanha A enquanto a relacao proporcional esta ativa.",
+        }
+    ],
+    "operations": [
+        {
+            "id": "op_scale",
+            "type": "scale",
+            "target": "A",
+            "params": {"factor": "k"},
+            "description": "Escalar A e recalcular B pelo fator k.",
+        }
     ],
     "invariants": [
         {"id": "inv1", "description": "A razao B/A permanece igual a k enquanto a relacao proporcional estiver ativa."}
@@ -94,4 +114,3 @@ DEMO_TEST = {
         },
     ]
 }
-

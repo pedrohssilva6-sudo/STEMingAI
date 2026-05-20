@@ -2,7 +2,9 @@ import type { Block, SceneSpec } from '../types';
 
 export const demoScene: SceneSpec = {
   scene_id: 'proporcao_escala_intro',
+  version: '1.0',
   domain: 'matematica',
+  engine: 'geometry',
   stage_goal: 'Entender proporcao como conservacao de uma razao sob variacao de escala.',
   model_limitations: [
     'Modelo bidimensional simples.',
@@ -19,6 +21,12 @@ export const demoScene: SceneSpec = {
     { id: 'k', label: 'k', control: 'slider', min: 1, max: 5, step: 0.5, default: 3 }
   ],
   relations: [{ id: 'r1', type: 'proportionality', label: 'B = k * A', from: 'A', to: 'B', rule: 'B.value = k * A.value' }],
+  constraints: [
+    { id: 'c1', type: 'dependency', targets: ['A', 'B'], expression: 'B.value = k * A.value', description: 'B acompanha A enquanto a relacao proporcional esta ativa.' }
+  ],
+  operations: [
+    { id: 'op_scale', type: 'scale', target: 'A', params: { factor: 'k' }, description: 'Escalar A e recalcular B pelo fator k.' }
+  ],
   invariants: [{ id: 'inv1', description: 'A razao B/A permanece igual a k enquanto a relacao proporcional estiver ativa.' }],
   construction_events: [
     { type: 'create_object', target: 'A', caption: 'Criar a grandeza de entrada A.' },
@@ -56,4 +64,3 @@ export const demoBlock: Block = {
     }
   ]
 };
-

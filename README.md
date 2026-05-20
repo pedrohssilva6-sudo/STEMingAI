@@ -11,6 +11,7 @@ Prototipo web do Laboratorio Vivo de Aprendizagem Estrutural, adaptado do escopo
 - Demo funcional de `Proporcao e escala`.
 - Backend FastAPI usando `langchain-google-vertexai`, com os mesmos nomes de variaveis do CorethicAI.
 - Fallback deterministico quando Vertex AI falha ou ainda nao esta configurado.
+- Nucleo Scene Engine v1 documentado em `docs/scene-engine-v1.md`.
 
 ## Vertex AI
 

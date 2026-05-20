@@ -87,17 +87,20 @@ Restrinja ao escopo de exatas, ciencias naturais ou computacao.
 def generate_scene(payload: SceneRequest):
     prompt = f"""
 {SYSTEM_SCOPE}
-Gere uma SceneSpec v0 para renderizacao deterministica no frontend.
+Gere uma SceneSpec v1 para renderizacao deterministica no frontend.
 Assunto: {payload.topic}
 Etapa: {payload.stage_title}
 Objetivo da etapa: {payload.stage_goal}
 Schema obrigatorio:
-scene_id, domain, stage_goal, model_limitations[], objects[], variables[], relations[], invariants[],
-construction_events[], click_explanations{{}}.
+scene_id, version, domain, engine, stage_goal, model_limitations[], objects[], variables[], relations[],
+constraints[], operations[], invariants[], construction_events[], click_explanations{{}}.
 Use objetos padronizados para o motor modular. Tipos aceitos no MVP:
 quantity, relation_label, point, segment, polygon, formula, cell, molecule, atom, chemical_element, node.
 Campos opcionais por objeto: x, y, width, height, radius, points[], symbol, formula, charge, state, metadata.
 Use x/y/width/height em porcentagem do canvas e evite sobreposicao inicial.
+Engines aceitos: geometry, graph, symbolic, physics, chemistry, biology, statistics, timeline.
+Relacoes aceitas: proportionality, dependency, chemical_bond, force, field, flow, edge, contains, equivalence, correspondence.
+Constraints declaram hipoteses do modelo. Operations declaram transformacoes manipulaveis pelo usuario.
 Eventos permitidos: create_object, set_property, connect, disconnect, transform, highlight_invariant,
 add_variable_control, simulate_step, remove_object, compare_states.
 Inclua posicoes x/y percentuais nos objetos quando fizer sentido.

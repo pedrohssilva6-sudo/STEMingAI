@@ -331,6 +331,14 @@ input:focus, textarea:focus, select:focus { border-color: #38bdf8; }
   border-left: 2px solid #a78bfa;
   padding-left: 10px;
 }
+.issue {
+  font-size: 13px;
+  border-left: 2px solid #facc15;
+  padding-left: 10px;
+}
+.issue.error { border-color: #fb7185; color: #fecdd3; }
+.issue.warning { border-color: #facc15; color: #fef3c7; }
+.issue.ok { border-color: #22c55e; color: #bbf7d0; }
 .timeline-list {
   display: grid;
   gap: 8px;
