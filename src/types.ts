@@ -4,6 +4,8 @@ export type Stage = {
   goal: string;
   status: 'active' | 'locked' | 'done' | string;
   mastery_score: number;
+  scene?: SceneSpec;
+  scene_source?: string;
 };
 
 export type Block = {
@@ -131,4 +133,19 @@ export type ChatMessage = {
   role: 'assistant' | 'user';
   content: string;
   source?: string;
+};
+
+export type SceneAction =
+  | { type: 'add_object'; object: SceneObject; explanation?: string }
+  | { type: 'update_object'; id: string; patch: Partial<SceneObject>; explanation?: string }
+  | { type: 'remove_object'; id: string; explanation?: string }
+  | { type: 'add_relation'; relation: SceneRelation; explanation?: string }
+  | { type: 'remove_relation'; id: string; explanation?: string }
+  | { type: 'set_variable'; id: string; value: number; explanation?: string }
+  | { type: 'replace_scene'; scene: SceneSpec; explanation?: string };
+
+export type TutorResponse = {
+  answer: string;
+  source: string;
+  actions?: SceneAction[];
 };

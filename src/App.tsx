@@ -18,14 +18,13 @@ import {
   TestTube2,
   X
 } from 'lucide-react';
-import { demoScene } from './data/demo';
 import { askTutor, evaluateMastery, generateScene, generateStages } from './services/api';
 import { loadBlocks, saveBlocks } from './state/storage';
 import { loadBlocksFromSupabase, saveBlockToSupabase } from './services/supabase';
 import { SimulationCanvas } from './engine/SimulationCanvas';
 import { clampPosition, type Point } from './engine/layout';
 import { defaultValues, executeScene } from './engine/executor';
-import type { Block, ChatMessage, SceneObject, SceneRelation, SceneSpec, Stage } from './types';
+import type { Block, ChatMessage, SceneAction, SceneObject, SceneRelation, SceneSpec, Stage } from './types';
 
 type DrawerTab = 'chat' | 'variables' | 'timeline' | 'inspector';
 
@@ -39,10 +38,10 @@ const initialMessages: ChatMessage[] = [
 function App() {
   const [blocks, setBlocks] = useState<Block[]>(loadBlocks);
   const [activeBlockId, setActiveBlockId] = useState(blocks[0]?.id ?? '');
-  const activeBlock = blocks.find((block) => block.id === activeBlockId) ?? blocks[0];
-  const [activeStage, setActiveStage] = useState<Stage>(activeBlock.stages[0]);
-  const [scene, setScene] = useState<SceneSpec>(demoScene);
-  const [values, setValues] = useState<Record<string, number>>(defaultValues(demoScene));
+  const activeBlock = blocks.find((block) => block.id === activeBlockId);
+  const [activeStage, setActiveStage] = useState<Stage | null>(activeBlock?.stages[0] ?? null);
+  const [scene, setScene] = useState<SceneSpec | null>(activeStage?.scene ?? null);
+  const [values, setValues] = useState<Record<string, number>>(activeStage?.scene ? defaultValues(activeStage.scene) : {});
   const [positions, setPositions] = useState<Record<string, Point>>({});
   const [step, setStep] = useState(0);
   const [playing, setPlaying] = useState(true);
@@ -59,13 +58,14 @@ function App() {
   const [testOpen, setTestOpen] = useState(false);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [testResult, setTestResult] = useState('');
+  const [flowMessage, setFlowMessage] = useState('Escolha um conteúdo e crie um bloco para a IA montar as etapas e a simulação.');
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [modalPoint, setModalPoint] = useState<Point | null>({ x: 17, y: 62 });
   const [connectFrom, setConnectFrom] = useState<string | null>(null);
   const [userRelations, setUserRelations] = useState<SceneRelation[]>([]);
   const svgRef = useRef<SVGSVGElement | null>(null);
 
-  const sceneWithUserRelations = useMemo<SceneSpec>(() => ({
+  const sceneWithUserRelations = useMemo<SceneSpec | null>(() => scene ? ({
     ...scene,
     relations: [...scene.relations, ...userRelations],
     construction_events: [
@@ -76,13 +76,13 @@ function App() {
       ...scene.click_explanations,
       ...Object.fromEntries(userRelations.map((relation) => [relation.id, `Conexao manual criada pelo usuario entre ${relation.from} e ${relation.to}. Ela funciona como relacao exploratoria ate a IA ou um motor de dominio atribuir uma regra formal.`]))
     }
-  }), [scene, userRelations]);
-  const sceneState = useMemo(() => executeScene(sceneWithUserRelations, { values, relationActive, positions, step }), [sceneWithUserRelations, values, relationActive, positions, step]);
-  const objects = sceneState.objects;
+  }) : null, [scene, userRelations]);
+  const sceneState = useMemo(() => sceneWithUserRelations ? executeScene(sceneWithUserRelations, { values, relationActive, positions, step }) : null, [sceneWithUserRelations, values, relationActive, positions, step]);
+  const objects = sceneState?.objects ?? [];
   const a = Number(values['A.value'] ?? 2);
   const k = Number(values.k ?? 3);
   const b = objects.find((object) => object.id === 'B')?.value ?? a * k;
-  const ratio = sceneState.measurements.ratio_AB ?? (a ? Number((Number(b) / a).toFixed(2)) : 0);
+  const ratio = sceneState?.measurements.ratio_AB ?? (a ? Number((Number(b) / a).toFixed(2)) : 0);
 
   useEffect(() => {
     loadBlocksFromSupabase().then((remoteBlocks) => {
@@ -90,6 +90,11 @@ function App() {
         setBlocks(remoteBlocks);
         setActiveBlockId(remoteBlocks[0].id);
         setActiveStage(remoteBlocks[0].stages[0]);
+        if (remoteBlocks[0].stages[0]?.scene) {
+          setScene(remoteBlocks[0].stages[0].scene);
+          setValues(defaultValues(remoteBlocks[0].stages[0].scene));
+          setFlowMessage('Bloco carregado do Supabase.');
+        }
       }
     });
   }, []);
@@ -98,32 +103,51 @@ function App() {
 
   useEffect(() => {
     if (!playing) return;
+    if (!sceneWithUserRelations) return;
     const timer = window.setInterval(() => {
       setStep((current) => (current >= sceneWithUserRelations.construction_events.length - 1 ? current : current + 1));
     }, 900);
     return () => window.clearInterval(timer);
-  }, [playing, sceneWithUserRelations.construction_events.length]);
+  }, [playing, sceneWithUserRelations?.construction_events.length]);
 
   async function openStage(block: Block, stage: Stage) {
     setActiveBlockId(block.id);
     setActiveStage(stage);
-    setScene(demoScene);
-    setValues(defaultValues(demoScene));
+    setFlowMessage(stage.scene ? 'Cena carregada da etapa salva.' : 'Gerando simulação estrutural com IA...');
+    setScene(stage.scene ?? null);
+    setValues(stage.scene ? defaultValues(stage.scene) : {});
     setPositions({});
     setStep(0);
     setPlaying(true);
-    setSelectedId('A');
+    setSelectedId('');
     setConnectFrom(null);
     setUserRelations([]);
-    setModalPoint({ x: 17, y: 62 });
-    const nextScene = await generateScene(block.topic, stage.title, stage.goal);
-    setScene(nextScene);
-    setValues(defaultValues(nextScene));
+    setModalPoint(null);
+    if (stage.scene) return;
+    try {
+      const nextScene = await generateScene(block.topic, stage.title, stage.goal);
+      const nextStage = { ...stage, scene: nextScene, scene_source: 'vertex' };
+      const updatedBlock = {
+        ...block,
+        stages: block.stages.map((item) => (item.id === stage.id ? nextStage : item)),
+        updatedAt: new Date().toISOString()
+      };
+      setBlocks((current) => current.map((item) => (item.id === block.id ? updatedBlock : item)));
+      saveBlockToSupabase(updatedBlock);
+      setActiveStage(nextStage);
+      setScene(nextScene);
+      setValues(defaultValues(nextScene));
+      setSelectedId(nextScene.objects[0]?.id ?? '');
+      setFlowMessage('Simulação gerada e salva na etapa.');
+    } catch (error) {
+      setFlowMessage(error instanceof Error ? `Falha ao gerar simulação: ${error.message}` : 'Falha ao gerar simulação.');
+    }
   }
 
   async function createBlock(event: FormEvent) {
     event.preventDefault();
     setCreating(true);
+    setFlowMessage('Gerando etapas conceituais com IA...');
     try {
       const stages = await generateStages(newTopic, newGoal, level);
       const block: Block = {
@@ -139,6 +163,8 @@ function App() {
       setBlocks((current) => [block, ...current]);
       saveBlockToSupabase(block);
       await openStage(block, block.stages[0]);
+    } catch (error) {
+      setFlowMessage(error instanceof Error ? `Falha ao criar bloco: ${error.message}` : 'Falha ao criar bloco.');
     } finally {
       setCreating(false);
     }
@@ -147,19 +173,113 @@ function App() {
   async function sendMessage(event: FormEvent) {
     event.preventDefault();
     const content = chatInput.trim();
-    if (!content) return;
+    if (!content || !sceneWithUserRelations) return;
     setChatInput('');
     setMessages((current) => [...current, { role: 'user', content }]);
     try {
       const result = await askTutor({ message: content, scene: sceneWithUserRelations, selected_id: selectedId, variables: values, relation_active: relationActive });
       setMessages((current) => [...current, { role: 'assistant', content: result.answer, source: result.source }]);
+      if (result.actions?.length) {
+        applySceneActions(result.actions);
+        setFlowMessage(`${result.actions.length} alteracao(oes) aplicada(s) pela IA na simulação.`);
+      }
     } catch {
-      setMessages((current) => [...current, { role: 'assistant', content: 'A IA nao respondeu agora. A cena continua manipulavel localmente.' }]);
+      setMessages((current) => [...current, { role: 'assistant', content: 'A chamada da IA falhou. Nenhuma mensagem pronta foi usada; tente novamente em instantes.' }]);
     }
+  }
+
+  function applySceneActions(actions: SceneAction[]) {
+    if (!scene) return;
+    let nextScene = scene;
+    const nextValues = { ...values };
+
+    for (const action of actions) {
+      if (action.type === 'replace_scene') {
+        nextScene = action.scene;
+      }
+      if (action.type === 'add_object') {
+        const object = normalizeActionObject(action.object);
+        nextScene = {
+          ...nextScene,
+          objects: [...nextScene.objects.filter((item) => item.id !== object.id), object],
+          construction_events: [...nextScene.construction_events, { type: 'create_object', target: object.id, caption: action.explanation ?? `IA adicionou ${object.label}.` }],
+          click_explanations: { ...nextScene.click_explanations, [object.id]: action.explanation ?? `Objeto ${object.label} adicionado pela IA.` }
+        };
+      }
+      if (action.type === 'update_object') {
+        nextScene = {
+          ...nextScene,
+          objects: nextScene.objects.map((object) => (object.id === action.id ? { ...object, ...action.patch } : object)),
+          construction_events: [...nextScene.construction_events, { type: 'transform', target: action.id, caption: action.explanation ?? `IA alterou ${action.id}.` }]
+        };
+      }
+      if (action.type === 'remove_object') {
+        nextScene = {
+          ...nextScene,
+          objects: nextScene.objects.filter((object) => object.id !== action.id),
+          relations: nextScene.relations.filter((relation) => relation.from !== action.id && relation.to !== action.id),
+          construction_events: [...nextScene.construction_events, { type: 'remove_object', target: action.id, caption: action.explanation ?? `IA removeu ${action.id}.` }]
+        };
+      }
+      if (action.type === 'add_relation') {
+        nextScene = {
+          ...nextScene,
+          relations: [...nextScene.relations.filter((relation) => relation.id !== action.relation.id), action.relation],
+          construction_events: [...nextScene.construction_events, { type: 'connect', relation: action.relation.id, caption: action.explanation ?? `IA conectou ${action.relation.from} a ${action.relation.to}.` }],
+          click_explanations: { ...nextScene.click_explanations, [action.relation.id]: action.explanation ?? `Relação ${action.relation.type} adicionada pela IA.` }
+        };
+      }
+      if (action.type === 'remove_relation') {
+        nextScene = {
+          ...nextScene,
+          relations: nextScene.relations.filter((relation) => relation.id !== action.id),
+          construction_events: [...nextScene.construction_events, { type: 'disconnect', relation: action.id, caption: action.explanation ?? `IA removeu a relação ${action.id}.` }]
+        };
+      }
+      if (action.type === 'set_variable') {
+        nextValues[action.id] = action.value;
+        nextScene = {
+          ...nextScene,
+          variables: nextScene.variables.map((variable) => (variable.id === action.id ? { ...variable, default: action.value } : variable)),
+          construction_events: [...nextScene.construction_events, { type: 'set_property', target: action.id, caption: action.explanation ?? `IA ajustou ${action.id} para ${action.value}.` }]
+        };
+      }
+    }
+
+    setScene(nextScene);
+    setValues(nextValues);
+    persistActiveScene(nextScene);
+  }
+
+  function normalizeActionObject(object: SceneObject): SceneObject {
+    const metadata = object.metadata ?? {};
+    const loose = object as SceneObject & { name?: string; attributes?: Record<string, unknown> };
+    return {
+      ...object,
+      type: object.type === 'organelle' ? 'cell' : object.type,
+      label: object.label ?? loose.name ?? String(metadata.name ?? object.id),
+      x: object.x ?? 50,
+      y: object.y ?? 50,
+      metadata: { ...metadata, ...(loose.attributes ? { attributes: loose.attributes } : {}) }
+    };
+  }
+
+  function persistActiveScene(nextScene: SceneSpec) {
+    if (!activeBlock || !activeStage) return;
+    const nextStage = { ...activeStage, scene: nextScene, scene_source: 'vertex' };
+    const updatedBlock = {
+      ...activeBlock,
+      stages: activeBlock.stages.map((stage) => (stage.id === activeStage.id ? nextStage : stage)),
+      updatedAt: new Date().toISOString()
+    };
+    setActiveStage(nextStage);
+    setBlocks((current) => current.map((block) => (block.id === activeBlock.id ? updatedBlock : block)));
+    saveBlockToSupabase(updatedBlock);
   }
 
   async function submitTest(event: FormEvent) {
     event.preventDefault();
+    if (!sceneWithUserRelations || !activeBlock || !activeStage) return;
     const result = await evaluateMastery(answers, sceneWithUserRelations);
     setTestResult(`Score ${result.score}/100. ${result.feedback}`);
     const updated = blocks.map((block) =>
@@ -226,10 +346,13 @@ function App() {
     if (selectedId === 'live') {
       return `Estado atual: A = ${a}, k = ${k}, B = ${b}. B/A = ${ratio} ${relationActive ? 'permanece preso a k pela relacao ativa.' : 'esta livre porque a relacao foi removida.'}`;
     }
-    return scene.click_explanations[selectedId] ?? 'Este item ainda nao tem descricao contextual gerada. A cena aceita posicao, conexoes e variaveis mesmo assim.';
+    return scene?.click_explanations[selectedId] ?? 'Este item ainda nao tem descricao contextual gerada. A cena aceita posicao, conexoes e variaveis mesmo assim.';
   }
 
   function drawerContent() {
+    if (!scene || !sceneState) {
+      return <div className="drawer-section"><p>{flowMessage}</p></div>;
+    }
     if (drawerTab === 'chat') {
       return <><div className="messages">{messages.map((message, index) => <div key={`${message.role}-${index}`} className={`message ${message.role}`}>{message.content}</div>)}</div><form className="chat-form" onSubmit={sendMessage}><input value={chatInput} onChange={(event) => setChatInput(event.target.value)} placeholder="Pergunte sobre a cena atual" /><button><Send size={18} /></button></form></>;
     }
@@ -256,36 +379,43 @@ function App() {
           <button className="primary" disabled={creating}><Plus size={18} /> {creating ? 'Gerando' : 'Criar bloco'}</button>
         </form>
         <section className="block-list">
-          {blocks.map((block) => <button key={block.id} className={`block-card ${block.id === activeBlock.id ? 'active' : ''}`} onClick={() => openStage(block, block.stages[0])}><span>{block.title}</span><small>{block.stages.filter((stage) => stage.status === 'done').length}/{block.stages.length} etapas dominadas</small></button>)}
+          {blocks.map((block) => <button key={block.id} className={`block-card ${block.id === activeBlock?.id ? 'active' : ''}`} onClick={() => openStage(block, block.stages[0])}><span>{block.title}</span><small>{block.stages.filter((stage) => stage.status === 'done').length}/{block.stages.length} etapas dominadas</small></button>)}
         </section>
       </aside>
 
       <section className="immersive-stage">
         <div className="aurora" />
         <header className="stage-head">
-          <div><strong>{activeBlock.title}</strong><span>{activeStage.title}</span></div>
-          <div className="engine-badge"><Atom size={17} /> Motor {scene.engine ?? '2d'} modular</div>
+          <div><strong>{activeBlock?.title ?? 'Novo laboratório'}</strong><span>{activeStage?.title ?? 'Aguardando criação do bloco'}</span></div>
+          <div className="engine-badge"><Atom size={17} /> Motor {scene?.engine ?? 'v1'} modular</div>
         </header>
 
         <div className="floating-toolbar">
           <button onClick={() => setPlaying((current) => !current)}>{playing ? <CirclePause size={18} /> : <CirclePlay size={18} />}</button>
           <button onClick={() => setStep((current) => Math.max(0, current - 1))}>Voltar</button>
-          <button onClick={() => setStep((current) => Math.min(sceneWithUserRelations.construction_events.length - 1, current + 1))}>Avancar</button>
+          <button onClick={() => setStep((current) => Math.min((sceneWithUserRelations?.construction_events.length ?? 1) - 1, current + 1))}>Avancar</button>
           <button onClick={() => { setStep(0); setRelationActive(true); setPositions({}); }}><RotateCcw size={18} /> Reconstruir</button>
         </div>
 
-        <SimulationCanvas
-          state={sceneState}
-          svgRef={svgRef}
-          relationActive={relationActive}
-          selectedId={selectedId}
-          draggingId={draggingId}
-          onMove={moveDrag}
-          onStopDrag={stopDrag}
-          onObjectPointerDown={startDrag}
-          onSelectObject={(object) => selectElement(object.id, { x: object.x ?? 50, y: object.y ?? 50 })}
-          onSelectRelation={(relation, point) => selectElement(relation.id, point)}
-        />
+        {sceneState ? (
+          <SimulationCanvas
+            state={sceneState}
+            svgRef={svgRef}
+            relationActive={relationActive}
+            selectedId={selectedId}
+            draggingId={draggingId}
+            onMove={moveDrag}
+            onStopDrag={stopDrag}
+            onObjectPointerDown={startDrag}
+            onSelectObject={(object) => selectElement(object.id, { x: object.x ?? 50, y: object.y ?? 50 })}
+            onSelectRelation={(relation, point) => selectElement(relation.id, point)}
+          />
+        ) : (
+          <div className="empty-stage">
+            <strong>Fluxo real aguardando entrada</strong>
+            <p>{flowMessage}</p>
+          </div>
+        )}
 
         {modalPoint && selectedId && (
           <div className="object-popover" style={{ left: `${Math.min(76, Math.max(18, modalPoint.x))}%`, top: `${Math.min(78, Math.max(12, modalPoint.y))}%` }}>
@@ -297,7 +427,7 @@ function App() {
 
         <div className="stage-caption">
           <Sparkles size={18} />
-          <span>{connectFrom ? `Modo conexao ativo: clique em outro objeto para conectar a ${connectFrom}.` : scene.stage_goal}</span>
+          <span>{connectFrom ? `Modo conexao ativo: clique em outro objeto para conectar a ${connectFrom}.` : scene?.stage_goal ?? flowMessage}</span>
         </div>
 
         <button className="fab" onClick={() => setDrawerOpen(true)}><Settings2 size={24} /></button>

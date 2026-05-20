@@ -75,3 +75,13 @@ def extract_json(text: str) -> Any:
         cleaned = cleaned[: end + 1]
     return json.loads(cleaned)
 
+
+def repair_json(text: str, instruction: str = "Corrija para JSON valido.") -> Any:
+    prompt = f"""
+{instruction}
+Retorne somente JSON valido, sem markdown e sem explicacao.
+Conteudo a corrigir:
+{text}
+"""
+    repaired = invoke_text(prompt, deep=False, temperature=0, max_tokens=5000)
+    return extract_json(repaired)

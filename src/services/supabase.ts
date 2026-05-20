@@ -17,7 +17,7 @@ export async function loadBlocksFromSupabase(): Promise<Block[] | null> {
     return null;
   }
 
-  return (data ?? []).map((row) => row.payload as Block).filter(Boolean);
+  return (data ?? []).map((row) => row.payload as Block).filter((block) => block && block.id !== 'demo-proporcao');
 }
 
 export async function saveBlockToSupabase(block: Block) {
@@ -33,4 +33,3 @@ export async function saveBlockToSupabase(block: Block) {
     console.warn('Supabase save fallback:', error.message);
   }
 }
-

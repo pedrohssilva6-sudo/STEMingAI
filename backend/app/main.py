@@ -11,8 +11,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from .fallbacks import DEMO_SCENE, DEMO_STAGES, DEMO_TEST
-from .vertex import extract_json, invoke_text
+from .fallbacks import DEMO_TEST
+from .vertex import extract_json, invoke_text, repair_json
 
 
 app = FastAPI(title="STEMingAI API", version="0.1.0")
@@ -80,7 +80,12 @@ Restrinja ao escopo de exatas, ciencias naturais ou computacao.
         return {"stages": stages, "source": "vertex"}
     except Exception as exc:
         logging.warning("Fallback de etapas: %s", exc)
-        return {"stages": DEMO_STAGES, "source": "fallback"}
+        stages = [
+            {"id": f"estrutura-{payload.topic.lower().replace(' ', '-')}-1", "title": f"Elementos fundamentais de {payload.topic}", "goal": f"Identificar objetos, propriedades e variaveis centrais. Objetivo: {payload.goal}", "status": "active", "mastery_score": 0},
+            {"id": f"relacoes-{payload.topic.lower().replace(' ', '-')}-2", "title": f"Relacoes e dependencias em {payload.topic}", "goal": "Construir conexoes, restricoes e hipoteses do modelo.", "status": "active", "mastery_score": 0},
+            {"id": f"transformacoes-{payload.topic.lower().replace(' ', '-')}-3", "title": f"Transformacoes e invariantes em {payload.topic}", "goal": "Manipular variaveis e observar o que muda, o que permanece e o que quebra.", "status": "active", "mastery_score": 0},
+        ]
+        return {"stages": stages, "source": "fallback"}
 
 
 @app.post("/api/scene")
@@ -96,7 +101,7 @@ scene_id, version, domain, engine, stage_goal, model_limitations[], objects[], v
 constraints[], operations[], invariants[], construction_events[], click_explanations{{}}.
 Use objetos padronizados para o motor modular. Tipos aceitos no MVP:
 quantity, relation_label, point, segment, polygon, formula, cell, molecule, atom, chemical_element, node.
-Campos opcionais por objeto: x, y, width, height, radius, points[], symbol, formula, charge, state, metadata.
+Cada objeto deve ter obrigatoriamente id, type e label. Campos opcionais por objeto: x, y, width, height, radius, points[], symbol, formula, charge, state, metadata.
 Use x/y/width/height em porcentagem do canvas e evite sobreposicao inicial.
 Engines aceitos: geometry, graph, symbolic, physics, chemistry, biology, statistics, timeline.
 Relacoes aceitas: proportionality, dependency, chemical_bond, force, field, flow, edge, contains, equivalence, correspondence.
@@ -107,11 +112,15 @@ Inclua posicoes x/y percentuais nos objetos quando fizer sentido.
 Retorne somente JSON.
 """
     try:
-        scene = extract_json(invoke_text(prompt, deep=True, temperature=0.15, max_tokens=2600))
+        raw = invoke_text(prompt, deep=True, temperature=0.15, max_tokens=5200)
+        try:
+            scene = extract_json(raw)
+        except Exception:
+            scene = repair_json(raw, "Corrija esta SceneSpec v1 truncada ou invalida mantendo o assunto, objetos, relacoes, constraints, operations e eventos.")
         return {"scene": scene, "source": "vertex"}
     except Exception as exc:
         logging.warning("Fallback de SceneSpec: %s", exc)
-        return {"scene": DEMO_SCENE, "source": "fallback"}
+        raise HTTPException(status_code=502, detail=f"Falha ao gerar SceneSpec com Vertex AI: {exc}") from exc
 
 
 @app.post("/api/chat")
@@ -130,18 +139,37 @@ def chat(payload: ChatRequest):
 Estado atual da cena:
 {json.dumps(compact_scene, ensure_ascii=False)}
 Pergunta do usuario: {payload.message}
-Responda em portugues, de forma curta, conectando a resposta a objetos, relacoes e invariantes da cena.
+Responda como JSON valido com este formato:
+{{
+  "answer": "resposta em portugues para o usuario",
+  "actions": []
+}}
+Use actions apenas quando o usuario pedir para alterar a simulacao ou quando a melhor resposta for demonstrar algo.
+Actions permitidas:
+- add_object: {{"type":"add_object","object":{{SceneObject}}}}
+- update_object: {{"type":"update_object","id":"objeto","patch":{{...}}}}
+- remove_object: {{"type":"remove_object","id":"objeto"}}
+- add_relation: {{"type":"add_relation","relation":{{SceneRelation}}}}
+- remove_relation: {{"type":"remove_relation","id":"relacao"}}
+- set_variable: {{"type":"set_variable","id":"variavel","value":numero}}
+- replace_scene: {{"type":"replace_scene","scene":{{SceneSpec v1 completo}}}}
+SceneObject em actions tambem deve usar os tipos aceitos e conter id, type, label, x e y. Se quiser representar organela, use type="cell" com label da organela e metadata.kind="organelle".
+Nao repita mensagens prontas. Responda ao pedido especifico e considere selected_id, variables e relation_active.
 """
     try:
-        return {"answer": invoke_text(prompt, max_tokens=900), "source": "vertex"}
+        raw = invoke_text(prompt, max_tokens=1600)
+        try:
+            parsed = extract_json(raw)
+            return {
+                "answer": parsed.get("answer", raw),
+                "actions": parsed.get("actions", []),
+                "source": "vertex",
+            }
+        except Exception:
+            return {"answer": raw, "actions": [], "source": "vertex"}
     except Exception as exc:
         logging.warning("Fallback de chat: %s", exc)
-        if payload.selected_id and payload.scene.get("click_explanations", {}).get(payload.selected_id):
-            return {"answer": payload.scene["click_explanations"][payload.selected_id], "source": "fallback"}
-        return {
-            "answer": "Pelo estado atual, foque na dependencia: A e manipulado, B acompanha quando a relacao esta ativa, e B/A revela o invariante.",
-            "source": "fallback",
-        }
+        raise HTTPException(status_code=502, detail=f"Falha ao conversar com Vertex AI: {exc}") from exc
 
 
 @app.get("/api/mastery/demo")
