@@ -120,8 +120,8 @@ Retorne somente JSON.
             scene = repair_json(raw, "Corrija esta SceneSpec v1 truncada ou invalida mantendo o assunto, objetos, relacoes, constraints, operations e eventos.")
         return {"scene": scene, "source": "vertex"}
     except Exception as exc:
-        logging.warning("Fallback de SceneSpec: %s", exc)
-        raise HTTPException(status_code=502, detail=f"Falha ao gerar SceneSpec com Vertex AI: {exc}") from exc
+        logging.exception("Erro critico ao gerar SceneSpec: %s", exc)
+        raise HTTPException(status_code=502, detail=f"Falha ao gerar simulação (Vertex AI): {str(exc)}") from exc
 
 
 @app.post("/api/chat")

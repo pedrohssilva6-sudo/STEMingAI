@@ -24,7 +24,12 @@ def _get_credentials():
         return None
     try:
         if not gcp_json_str.strip().startswith("{"):
-            gcp_json_str = base64.b64decode(gcp_json_str).decode("utf-8")
+            decoded_bytes = base64.b64decode(gcp_json_str)
+            try:
+                gcp_json_str = decoded_bytes.decode("utf-8")
+            except UnicodeDecodeError:
+                logging.error("Falha ao decodificar GCP_SERVICE_ACCOUNT_JSON como UTF-8. O conteudo base64 pode estar corrompido.")
+                return None
         return service_account.Credentials.from_service_account_info(
             json.loads(gcp_json_str),
             scopes=["https://www.googleapis.com/auth/cloud-platform"],
@@ -38,15 +43,20 @@ def get_model(model: str | None = None, temperature: float = 0.2, max_tokens: in
     project = os.getenv("GCP_PROJECT_ID")
     location = os.getenv("GCP_LOCATION", "us-central1")
     model_name = model or os.getenv("VERTEX_FAST_MODEL", "gemini-2.5-flash-lite")
-    timeout = float(os.getenv("LLM_TIMEOUT_SECONDS", "75"))
+    timeout = float(os.getenv("LLM_TIMEOUT_SECONDS", "180"))
     if not project:
         raise RuntimeError("GCP_PROJECT_ID nao configurado")
+    
+    creds = _get_credentials()
+    if not creds:
+        logging.warning("Iniciando sem credenciais explicitas (tentando Application Default Credentials)")
+
     return ChatVertexAI(
         model_name=model_name,
         temperature=temperature,
         project=project,
         location=location,
-        credentials=_get_credentials(),
+        credentials=creds,
         max_output_tokens=max_tokens,
         max_retries=1,
         timeout=timeout,

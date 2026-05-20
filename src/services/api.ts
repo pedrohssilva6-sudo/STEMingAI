@@ -7,7 +7,14 @@ async function postJson<T>(url: string, body: unknown): Promise<T> {
     body: JSON.stringify(body)
   });
   if (!response.ok) {
-    throw new Error(`HTTP ${response.status}`);
+    let detail = '';
+    try {
+      const errData = await response.json();
+      detail = errData.detail || errData.message || '';
+    } catch (e) {
+      // Ignora erro ao ler JSON do erro
+    }
+    throw new Error(detail || `HTTP ${response.status}`);
   }
   return response.json() as Promise<T>;
 }
