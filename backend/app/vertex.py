@@ -30,7 +30,7 @@ def _get_credentials():
             scopes=["https://www.googleapis.com/auth/cloud-platform"],
         )
     except Exception as exc:
-        logging.exception("Erro ao carregar GCP_SERVICE_ACCOUNT_JSON: %s", exc)
+        logging.error("Erro ao carregar GCP_SERVICE_ACCOUNT_JSON: %s", exc)
         return None
 
 
@@ -47,21 +47,20 @@ def _parse_service_account_json(raw_value: str) -> dict[str, Any]:
 
     if value.startswith("{"):
         parsed = json.loads(value)
-        if not isinstance(parsed, dict):
-            raise ValueError("GCP_SERVICE_ACCOUNT_JSON precisa ser um objeto JSON")
-        return parsed
+        return _validate_service_account_info(parsed, "GCP_SERVICE_ACCOUNT_JSON")
 
     try:
         unwrapped = json.loads(value)
         if isinstance(unwrapped, dict):
-            return unwrapped
+            return _validate_service_account_info(unwrapped, "GCP_SERVICE_ACCOUNT_JSON")
         if isinstance(unwrapped, str):
             return _parse_service_account_json(unwrapped)
     except json.JSONDecodeError:
         pass
 
+    compact_value = "".join(value.split())
     try:
-        decoded = base64.b64decode(value, validate=True).decode("utf-8-sig")
+        decoded = base64.b64decode(compact_value, validate=True).decode("utf-8-sig")
     except (binascii.Error, UnicodeDecodeError) as exc:
         raise ValueError(
             "GCP_SERVICE_ACCOUNT_JSON deve ser o JSON puro da service account, "
@@ -69,16 +68,24 @@ def _parse_service_account_json(raw_value: str) -> dict[str, Any]:
         ) from exc
 
     parsed = json.loads(decoded)
-    if not isinstance(parsed, dict):
-        raise ValueError("Base64 de GCP_SERVICE_ACCOUNT_JSON nao contem um objeto JSON")
-    return parsed
+    return _validate_service_account_info(parsed, "Base64 de GCP_SERVICE_ACCOUNT_JSON")
 
 
 def _load_service_account_file(path_value: str) -> dict[str, Any]:
     path = Path(path_value).expanduser()
     parsed = json.loads(path.read_text(encoding="utf-8-sig"))
+    return _validate_service_account_info(parsed, f"Arquivo de service account {path}")
+
+
+def _validate_service_account_info(parsed: Any, source: str) -> dict[str, Any]:
     if not isinstance(parsed, dict):
-        raise ValueError(f"Arquivo de service account nao contem objeto JSON: {path}")
+        raise ValueError(f"{source} nao contem um objeto JSON")
+    required = ["type", "project_id", "private_key", "client_email", "token_uri"]
+    missing = [key for key in required if not parsed.get(key)]
+    if missing:
+        raise ValueError(f"{source} nao parece ser uma service account valida; faltando: {', '.join(missing)}")
+    if parsed.get("type") != "service_account":
+        raise ValueError(f"{source} precisa ter type=service_account")
     return parsed
 
 

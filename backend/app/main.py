@@ -222,7 +222,17 @@ Nao repita mensagens prontas. Responda ao pedido especifico e considere selected
             return {"answer": raw, "actions": [], "source": "vertex"}
     except Exception as exc:
         logging.warning("Fallback de chat: %s", exc)
-        raise HTTPException(status_code=502, detail=f"Falha ao conversar com Vertex AI: {exc}") from exc
+        selected = payload.selected_id or "a cena atual"
+        return {
+            "answer": (
+                "Nao consegui acessar o Vertex AI agora, entao nao vou alterar a simulacao automaticamente. "
+                f"O ponto selecionado foi {selected}. Confira a variavel GCP_SERVICE_ACCOUNT_JSON no Render: "
+                "ela precisa conter o JSON completo da service account ou o base64 valido desse JSON."
+            ),
+            "actions": [],
+            "source": "local_fallback",
+            "warning": f"Vertex indisponivel: {exc}",
+        }
 
 
 @app.get("/api/mastery/demo")
