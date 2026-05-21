@@ -54,6 +54,7 @@ class ChatRequest(BaseModel):
     selected_id: str | None = None
     variables: dict[str, float | int | str | bool] = Field(default_factory=dict)
     relation_active: bool = True
+    explanation_context: dict[str, Any] | None = None
 
 
 class MasteryRequest(BaseModel):
@@ -138,6 +139,14 @@ Schema obrigatorio:
   "constraints": [],
   "operations": [],
   "invariants": [],
+  "buildCommands": [
+    {{"type":"createEnvironment","environment":{{"id":"env_main","type":"freeCanvas2d","dimension":"2d","coordinateSystem":"screen"}}}},
+    {{"type":"createShape","shape":{{"id":"shape_1","environmentId":"env_main","type":"label","dimension":"2d","transform":{{"position":[40,50],"layerId":"main"}},"properties":{{"label":"exemplo"}}}}}},
+    {{"type":"setProperty","targetId":"shape_1","key":"value","value":1}},
+    {{"type":"addRelation","relation":{{"id":"rel_1","environmentId":"env_main","type":"visual_connection","from":["shape_1"],"to":[],"active":true}}}},
+    {{"type":"addConstraint","constraint":{{"id":"constraint_1","type":"dependency","targets":["shape_1"],"description":"hipotese do modelo"}}}},
+    {{"type":"deriveInvariant","invariant":{{"id":"inv_1","statement":"estrutura preservada","dependsOn":["rel_1"],"status":"active","scope":"currentModel"}}}}
+  ],
   "construction_events": [],
   "click_explanations": {{}}
 }}
@@ -145,6 +154,7 @@ Schema obrigatorio:
 Use ambientes explícitos. A cena nunca deve conter objetos soltos no canvas.
 Tipos de ambiente: freeCanvas2d, euclideanPlane2d, cartesianPlane2d, physicsLab2d, graphWorkspace, dataSpace2d, cellCrossSection2d, chemicalContainer2d, space3d.
 Use objetos padronizados: quantity, relation_label, point, segment, polygon, formula, cell, molecule, atom, chemical_element, node, text, symbol, vector, solid_3d, surface_3d.
+Comandos permitidos em buildCommands: createEnvironment, createShape, setTransform, setProperty, bindProperty, addRelation, removeRelation, addConstraint, deriveInvariant, focusCamera, compareStates, askPrediction.
 Cada objeto deve ter obrigatoriamente id, type e label.
 Use x/y em porcentagem (0-100).
 Retorne SOMENTE o JSON puro, sem markdown e sem textos adicionais.
@@ -175,6 +185,7 @@ def chat(payload: ChatRequest):
         "selected_id": payload.selected_id,
         "variables": payload.variables,
         "relation_active": payload.relation_active,
+        "explanation_context": payload.explanation_context,
     }
     prompt = f"""
 {SYSTEM_SCOPE}

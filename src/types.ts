@@ -141,6 +141,14 @@ export type ShapeSpec = {
   };
 };
 
+export type ShapeDefinition = {
+  type: ShapeSpec['type'];
+  environments: EnvironmentSpec['type'][];
+  properties: string[];
+  operations: Array<'create' | 'move' | 'highlight' | 'measure' | 'scale' | 'rotate' | 'connect' | 'update'>;
+  defaultGeometry: Record<string, unknown>;
+};
+
 export type RelationSpecV2 = {
   id: string;
   environmentId: string;
@@ -175,8 +183,10 @@ export type BuildCommand =
   | { type: 'createShape'; shape: ShapeSpec }
   | { type: 'setTransform'; targetId: string; transform: ShapeSpec['transform'] }
   | { type: 'setProperty'; targetId: string; key: string; value: unknown; unit?: string }
+  | { type: 'bindProperty'; targetId: string; key: string; expression: string; variables?: string[] }
   | { type: 'addRelation'; relation: RelationSpecV2 }
   | { type: 'removeRelation'; relationId: string; reason?: string }
+  | { type: 'addConstraint'; constraint: SceneConstraint }
   | { type: 'deriveInvariant'; invariant: InvariantSpecV2 }
   | { type: 'focusCamera'; environmentId: string; viewport: EnvironmentSpec['viewport'] }
   | { type: 'compareStates'; beforeStep: number; afterStep: number; label?: string }
@@ -299,4 +309,16 @@ export type TutorResponse = {
   answer: string;
   source: string;
   actions?: SceneAction[];
+};
+
+export type ExplanationContext = {
+  clickedId: string;
+  clickedKind: 'shape' | 'relation' | 'invariant' | 'environment' | 'variable';
+  stageGoal: string;
+  environment?: EnvironmentSpec;
+  shape?: ShapeSpec;
+  activeRelations: RelationSpecV2[];
+  activeInvariants: InvariantSpecV2[];
+  recentEvents: EngineSceneEvent[];
+  userQuestion?: string;
 };

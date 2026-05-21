@@ -74,6 +74,7 @@ def normalize_scene(scene: dict[str, Any], topic: str = "conceito", stage_goal: 
     }
     scene["modelContract"] = normalize_contract(scene.get("modelContract"), scene, topic)
     scene["environments"] = normalize_environments(scene.get("environments"), scene)
+    scene["buildCommands"] = normalize_build_commands(scene.get("buildCommands"), scene)
     return scene
 
 
@@ -158,6 +159,96 @@ def normalize_environments(environments: Any, scene: dict[str, Any]) -> list[dic
             "assumptions": scene.get("model_limitations", []),
         }
     ]
+
+
+def normalize_build_commands(commands: Any, scene: dict[str, Any]) -> list[dict[str, Any]]:
+    if isinstance(commands, list) and commands:
+        return commands
+
+    env = scene["environments"][0]
+    output: list[dict[str, Any]] = [{"type": "createEnvironment", "environment": env}]
+    for obj in scene["objects"]:
+        output.append(
+            {
+                "type": "createShape",
+                "shape": {
+                    "id": obj["id"],
+                    "environmentId": env["id"],
+                    "type": shape_type_for(obj["type"]),
+                    "dimension": "3d" if obj.get("z") is not None or obj.get("depth") is not None else "2d",
+                    "transform": {"position": [obj.get("x", 0), obj.get("y", 0)], "layerId": "main"},
+                    "geometry": {
+                        "width": obj.get("width"),
+                        "height": obj.get("height"),
+                        "depth": obj.get("depth"),
+                        "radius": obj.get("radius"),
+                        "points": obj.get("points"),
+                        "vertices": obj.get("vertices"),
+                    },
+                    "properties": {
+                        "label": obj.get("label"),
+                        "value": obj.get("value"),
+                        "color": obj.get("color"),
+                        "symbol": obj.get("symbol"),
+                        "text": obj.get("text"),
+                        "formula": obj.get("formula"),
+                        "metadata": obj.get("metadata", {}),
+                    },
+                    "semantic": {"role": obj.get("metadata", {}).get("role", obj["type"]), "domain": scene["modelContract"]["domain"], "explainable": True},
+                    "interaction": {"draggable": True, "clickable": True, "selectable": True},
+                },
+            }
+        )
+    for rel in scene["relations"]:
+        output.append(
+            {
+                "type": "addRelation",
+                "relation": {
+                    "id": rel["id"],
+                    "environmentId": env["id"],
+                    "type": "functional_dependency" if rel.get("rule") else "visual_connection",
+                    "from": [rel["from"]],
+                    "to": [rel["to"]],
+                    "expression": rel.get("rule"),
+                    "active": rel.get("active", True),
+                    "semantic": {"role": rel.get("type"), "explanationHint": rel.get("label")},
+                },
+            }
+        )
+    for constraint in scene.get("constraints", []):
+        if isinstance(constraint, dict) and constraint.get("id"):
+            output.append({"type": "addConstraint", "constraint": constraint})
+    for invariant in scene.get("invariants", []):
+        if isinstance(invariant, dict):
+            output.append(
+                {
+                    "type": "deriveInvariant",
+                    "invariant": {
+                        "id": invariant.get("id", "invariant"),
+                        "statement": invariant.get("description", invariant.get("statement", "")),
+                        "dependsOn": [rel["id"] for rel in scene["relations"]],
+                        "status": "active",
+                        "scope": "currentModel",
+                    },
+                }
+            )
+    return output
+
+
+def shape_type_for(object_type: str) -> str:
+    return {
+        "quantity": "bar",
+        "point": "point2d",
+        "segment": "segment2d",
+        "polygon": "polygon",
+        "vector": "vector2d",
+        "solid_3d": "solid3dProjection",
+        "surface_3d": "solid3dProjection",
+        "atom": "particle2d",
+        "chemical_element": "particle2d",
+        "molecule": "particle2d",
+        "cell": "region2d",
+    }.get(object_type, "label")
 
 
 def map_object_type(raw_type: str, label: str) -> str:
@@ -264,4 +355,3 @@ def number_or(value: Any, fallback: float) -> float:
 
 def slug(value: str) -> str:
     return re.sub(r"[^a-z0-9_]+", "_", value.lower()).strip("_")
-

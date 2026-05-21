@@ -24,6 +24,7 @@ import { loadBlocksFromSupabase, saveBlockToSupabase } from './services/supabase
 import { SimulationCanvas } from './engine/SimulationCanvas';
 import { clampPosition, type Point } from './engine/layout';
 import { defaultValues, executeScene } from './engine/executor';
+import { buildExplanationContext } from './engine/explanationContext';
 import type { Block, ChatMessage, SceneAction, SceneObject, SceneRelation, SceneSpec, Stage } from './types';
 
 type DrawerTab = 'chat' | 'variables' | 'timeline' | 'inspector';
@@ -177,7 +178,8 @@ function App() {
     setChatInput('');
     setMessages((current) => [...current, { role: 'user', content }]);
     try {
-      const result = await askTutor({ message: content, scene: sceneWithUserRelations, selected_id: selectedId, variables: values, relation_active: relationActive });
+      const explanation_context = sceneState ? buildExplanationContext({ clickedId: selectedId || 'live', stageGoal: sceneWithUserRelations.stage_goal, engine: sceneState.engine, userQuestion: content }) : undefined;
+      const result = await askTutor({ message: content, scene: sceneWithUserRelations, selected_id: selectedId, variables: values, relation_active: relationActive, explanation_context });
       setMessages((current) => [...current, { role: 'assistant', content: result.answer, source: result.source }]);
       if (result.actions?.length) {
         applySceneActions(result.actions);
@@ -360,7 +362,7 @@ function App() {
       return <div className="drawer-section">{scene.variables.map((variable) => <label key={variable.id} className="slider-row"><span>{variable.label ?? variable.id}: {values[variable.id]}</span><input type="range" min={variable.min} max={variable.max} step={variable.step} value={values[variable.id] ?? 0} onChange={(event) => setValues((current) => ({ ...current, [variable.id]: Number(event.target.value) }))} /></label>)}<button className={`relation-toggle ${relationActive ? '' : 'off'}`} onClick={() => setRelationActive((current) => !current)}><GitBranch size={18} /> {relationActive ? 'Remover relacao' : 'Reconectar relacao'}</button></div>;
     }
     if (drawerTab === 'timeline') {
-      return <div className="drawer-section timeline-list">{sceneState.scene.construction_events.map((event, index) => <button key={`${event.type}-${index}`} className={index <= step ? 'done' : ''} onClick={() => setStep(index)}><span>{index + 1}</span>{event.caption ?? event.type}</button>)}</div>;
+      return <div className="drawer-section timeline-list">{sceneState.engine.eventLog.map((event) => <button key={event.id} className={event.step <= step ? 'done' : ''} onClick={() => setStep(event.step)}><span>{event.step + 1}</span>{event.command.type}{event.status !== 'applied' ? ` · ${event.status}` : ''}</button>)}</div>;
     }
     const environment = Object.values(sceneState.engine.environments)[0];
     const contract = sceneState.engine.modelContract;

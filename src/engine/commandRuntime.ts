@@ -93,12 +93,34 @@ function reduceCommand(state: EngineSceneState, command: BuildCommand): EngineSc
       }
     };
   }
+  if (command.type === 'bindProperty') {
+    const shape = ensureShape(state, command.targetId);
+    return {
+      ...state,
+      shapes: {
+        ...state.shapes,
+        [shape.id]: {
+          ...shape,
+          properties: {
+            ...shape.properties,
+            [`${command.key}Binding`]: {
+              expression: command.expression,
+              variables: command.variables ?? []
+            }
+          }
+        }
+      }
+    };
+  }
   if (command.type === 'addRelation') {
     ensureEnvironment(state, command.relation.environmentId);
     for (const id of [...command.relation.from, ...(command.relation.to ?? [])]) {
       ensureShape(state, id);
     }
     return { ...state, relations: { ...state.relations, [command.relation.id]: command.relation } };
+  }
+  if (command.type === 'addConstraint') {
+    return { ...state, constraints: { ...state.constraints, [command.constraint.id]: command.constraint } };
   }
   if (command.type === 'removeRelation') {
     const relations = { ...state.relations };
@@ -126,6 +148,9 @@ function reduceCommand(state: EngineSceneState, command: BuildCommand): EngineSc
         [environment.id]: { ...environment, viewport: command.viewport }
       }
     };
+  }
+  if (command.type === 'compareStates' || command.type === 'askPrediction') {
+    return state;
   }
   return state;
 }
