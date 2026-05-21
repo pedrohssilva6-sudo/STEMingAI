@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import binascii
 import json
 import logging
 import os
@@ -19,24 +20,66 @@ load_dotenv(Path("/home/pedroh/Desktop/CorethicAI/backend/.env"))
 
 
 def _get_credentials():
-    gcp_json_str = os.getenv("GCP_SERVICE_ACCOUNT_JSON")
-    if not gcp_json_str:
+    raw_value = os.getenv("GCP_SERVICE_ACCOUNT_JSON")
+    if not raw_value:
         return None
     try:
-        if not gcp_json_str.strip().startswith("{"):
-            decoded_bytes = base64.b64decode(gcp_json_str)
-            try:
-                gcp_json_str = decoded_bytes.decode("utf-8")
-            except UnicodeDecodeError:
-                logging.error("Falha ao decodificar GCP_SERVICE_ACCOUNT_JSON como UTF-8. O conteudo base64 pode estar corrompido.")
-                return None
+        service_account_info = _parse_service_account_json(raw_value)
         return service_account.Credentials.from_service_account_info(
-            json.loads(gcp_json_str),
+            service_account_info,
             scopes=["https://www.googleapis.com/auth/cloud-platform"],
         )
     except Exception as exc:
         logging.exception("Erro ao carregar GCP_SERVICE_ACCOUNT_JSON: %s", exc)
         return None
+
+
+def _parse_service_account_json(raw_value: str) -> dict[str, Any]:
+    value = raw_value.strip()
+    if not value:
+        raise ValueError("GCP_SERVICE_ACCOUNT_JSON esta vazio")
+
+    if value.startswith("@"):
+        return _load_service_account_file(value[1:])
+
+    if value.startswith("/") or value.startswith("./") or value.startswith("../"):
+        return _load_service_account_file(value)
+
+    if value.startswith("{"):
+        parsed = json.loads(value)
+        if not isinstance(parsed, dict):
+            raise ValueError("GCP_SERVICE_ACCOUNT_JSON precisa ser um objeto JSON")
+        return parsed
+
+    try:
+        unwrapped = json.loads(value)
+        if isinstance(unwrapped, dict):
+            return unwrapped
+        if isinstance(unwrapped, str):
+            return _parse_service_account_json(unwrapped)
+    except json.JSONDecodeError:
+        pass
+
+    try:
+        decoded = base64.b64decode(value, validate=True).decode("utf-8-sig")
+    except (binascii.Error, UnicodeDecodeError) as exc:
+        raise ValueError(
+            "GCP_SERVICE_ACCOUNT_JSON deve ser o JSON puro da service account, "
+            "um JSON escapado entre aspas, um base64 valido desse JSON, ou um caminho de arquivo"
+        ) from exc
+
+    parsed = json.loads(decoded)
+    if not isinstance(parsed, dict):
+        raise ValueError("Base64 de GCP_SERVICE_ACCOUNT_JSON nao contem um objeto JSON")
+    return parsed
+
+
+def _load_service_account_file(path_value: str) -> dict[str, Any]:
+    path = Path(path_value).expanduser()
+    parsed = json.loads(path.read_text(encoding="utf-8-sig"))
+    if not isinstance(parsed, dict):
+        raise ValueError(f"Arquivo de service account nao contem objeto JSON: {path}")
+    return parsed
 
 
 def get_model(model: str | None = None, temperature: float = 0.2, max_tokens: int | None = 1800):
