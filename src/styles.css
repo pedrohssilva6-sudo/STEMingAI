@@ -176,6 +176,21 @@ input:focus, textarea:focus, select:focus { border-color: #38bdf8; }
   stroke: rgba(255,255,255,.045);
   stroke-width: .25;
 }
+.environment-overlay line,
+.environment-overlay rect,
+.environment-overlay ellipse,
+.environment-overlay polygon {
+  fill: none;
+  stroke: rgba(125, 211, 252, .28);
+  stroke-width: .45;
+  stroke-dasharray: 1.5 1.6;
+}
+.environment-overlay text {
+  fill: #bae6fd;
+  stroke: transparent;
+  font-size: 2.1px;
+  font-weight: 700;
+}
 .world-canvas text {
   fill: #f8fafc;
   font-size: 2.25px;
@@ -349,6 +364,12 @@ input:focus, textarea:focus, select:focus { border-color: #38bdf8; }
   font-size: 13px;
   border-left: 2px solid #a78bfa;
   padding-left: 10px;
+}
+.logic-row {
+  font-size: 13px;
+  border-left: 2px solid #38bdf8;
+  padding-left: 10px;
+  color: #bae6fd;
 }
 .issue {
   font-size: 13px;

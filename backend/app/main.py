@@ -12,6 +12,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from .fallbacks import DEMO_TEST
+from .engine_fallback import build_conceptual_scene
+from .scene_normalizer import normalize_scene
 from .vertex import extract_json, invoke_text, repair_json
 
 
@@ -106,6 +108,27 @@ Schema obrigatorio:
   "domain": "string",
   "engine": "hybrid",
   "stage_goal": "string",
+  "modelContract": {{
+    "domain": "math",
+    "concept": "string",
+    "learningGoal": "string",
+    "fidelityLevel": "conceptual",
+    "preserves": ["string"],
+    "assumptions": ["string"],
+    "limitations": ["string"],
+    "nonGoals": ["string"]
+  }},
+  "environments": [{{
+    "id": "env_main",
+    "type": "freeCanvas2d",
+    "dimension": "2d",
+    "coordinateSystem": "screen",
+    "worldBounds": {{ "xMin": 0, "xMax": 100, "yMin": 0, "yMax": 100 }},
+    "viewport": {{ "zoom": 1, "pan": [0, 0], "camera": "orthographic" }},
+    "layers": [{{ "id": "main", "name": "Main", "zIndex": 1, "visible": true }}],
+    "rules": ["objects_exist_in_environment"],
+    "assumptions": ["string"]
+  }}],
   "model_limitations": ["string"],
   "objects": [
     {{ "id": "A", "type": "atom", "label": "H", "x": 40, "y": 50, "metadata": {{}} }}
@@ -119,6 +142,8 @@ Schema obrigatorio:
   "click_explanations": {{}}
 }}
 
+Use ambientes explícitos. A cena nunca deve conter objetos soltos no canvas.
+Tipos de ambiente: freeCanvas2d, euclideanPlane2d, cartesianPlane2d, physicsLab2d, graphWorkspace, dataSpace2d, cellCrossSection2d, chemicalContainer2d, space3d.
 Use objetos padronizados: quantity, relation_label, point, segment, polygon, formula, cell, molecule, atom, chemical_element, node, text, symbol, vector, solid_3d, surface_3d.
 Cada objeto deve ter obrigatoriamente id, type e label.
 Use x/y em porcentagem (0-100).
@@ -130,10 +155,14 @@ Retorne SOMENTE o JSON puro, sem markdown e sem textos adicionais.
             scene = extract_json(raw)
         except Exception:
             scene = repair_json(raw, "Corrija esta SceneSpec v1 truncada ou invalida mantendo o assunto, objetos, relacoes, constraints, operations e eventos.")
-        return {"scene": scene, "source": "vertex"}
+        return {"scene": normalize_scene(scene, payload.topic, payload.stage_goal), "source": "vertex"}
     except Exception as exc:
-        logging.exception("Erro critico ao gerar SceneSpec: %s", exc)
-        raise HTTPException(status_code=502, detail=f"Falha ao gerar simulação (Vertex AI): {str(exc)}") from exc
+        logging.exception("Fallback conceitual de SceneSpec: %s", exc)
+        return {
+            "scene": normalize_scene(build_conceptual_scene(payload.topic, payload.stage_title, payload.stage_goal), payload.topic, payload.stage_goal),
+            "source": "local_fallback",
+            "warning": f"Vertex falhou; cena conceitual local gerada: {str(exc)}",
+        }
 
 
 @app.post("/api/chat")

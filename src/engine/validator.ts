@@ -22,6 +22,12 @@ export function validateSceneSpec(scene: SceneSpec): SceneIssue[] {
   const kit = kitForDomain(scene.domain);
 
   if (!scene.scene_id) issues.push(error('scene_id', 'SceneSpec precisa de scene_id.'));
+  if (!scene.environments?.length && !scene.buildCommands?.some((command) => command.type === 'createEnvironment')) {
+    issues.push(warn('environments', 'Cena sem EnvironmentSpec explicito; a engine vai criar um ambiente padrão de compatibilidade.'));
+  }
+  if (!scene.modelContract) {
+    issues.push(warn('modelContract', 'Cena sem ModelContract explicito; a engine vai inferir domínio, fidelidade e limitações.'));
+  }
   if (!scene.model_limitations?.length) issues.push(error('model_limitations', 'Declare as limitacoes do modelo.'));
   if (!scene.objects?.length) issues.push(error('objects', 'A cena precisa de pelo menos um objeto.'));
 
@@ -63,4 +69,3 @@ function error(path: string, message: string): SceneIssue {
 function warn(path: string, message: string): SceneIssue {
   return { severity: 'warning', path, message };
 }
-

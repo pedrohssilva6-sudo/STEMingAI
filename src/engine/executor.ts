@@ -1,6 +1,7 @@
 import type { SceneObject, SceneRelation, SceneSpec, SceneState } from '../types';
 import { nudgeOverlaps, seedObjectLayout, type Point } from './layout';
 import { validateSceneSpec } from './validator';
+import { sceneToEngineState } from './sceneAdapter';
 
 export type RuntimeControls = {
   values: Record<string, number>;
@@ -30,6 +31,7 @@ export function visibleIdsFor(scene: SceneSpec, step: number) {
 
 export function executeScene(scene: SceneSpec, controls: RuntimeControls): SceneState {
   const issues = validateSceneSpec(scene);
+  const engine = sceneToEngineState(scene, controls.step);
   const seeded = scene.objects.map(seedObjectLayout).map((object) => {
     const positioned = controls.positions[object.id] ? { ...object, ...controls.positions[object.id] } : object;
     return applyDeterministicRules(positioned, controls.values, controls.relationActive);
@@ -38,7 +40,7 @@ export function executeScene(scene: SceneSpec, controls: RuntimeControls): Scene
   const visibleIds = visibleIdsFor(scene, controls.step);
   const measurements = measureScene(objects, scene.relations, controls);
 
-  return { scene, objects, visibleIds, issues, measurements };
+  return { scene, engine, objects, visibleIds, issues, measurements };
 }
 
 export function relationEndpoints(objects: SceneObject[], relation: SceneRelation) {
@@ -76,4 +78,3 @@ function measureScene(objects: SceneObject[], relations: SceneRelation[], contro
   }
   return measurements;
 }
-

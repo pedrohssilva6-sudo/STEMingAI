@@ -48,7 +48,15 @@ function normalizeScene(scene: SceneSpec): SceneSpec {
       label: object.label ?? String(object.metadata?.name ?? object.metadata?.text ?? object.id)
     })),
     variables: scene.variables ?? [],
-    relations: scene.relations ?? [],
+    relations: (scene.relations ?? []).map((relation, index) => ({
+      ...relation,
+      id: relation.id ?? `rel_${relation.from}_${relation.to}_${index}`,
+      from: String(relation.from),
+      to: String(relation.to),
+      type: relation.type ?? 'dependency',
+      label: relation.label ?? relation.type ?? 'dependency',
+      active: relation.active ?? true
+    })),
     constraints: scene.constraints ?? [],
     operations: scene.operations ?? [],
     invariants: scene.invariants ?? [],

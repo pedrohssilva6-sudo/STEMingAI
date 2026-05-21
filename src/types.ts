@@ -79,6 +79,132 @@ export type SceneOperation = {
   description?: string;
 };
 
+export type EnvironmentSpec = {
+  id: string;
+  type:
+    | 'freeCanvas2d'
+    | 'euclideanPlane2d'
+    | 'cartesianPlane2d'
+    | 'physicsLab2d'
+    | 'graphWorkspace'
+    | 'dataSpace2d'
+    | 'cellCrossSection2d'
+    | 'chemicalContainer2d'
+    | 'space3d';
+  dimension: '2d' | '3d';
+  coordinateSystem: 'screen' | 'cartesian' | 'polar' | 'graph' | 'region' | 'none';
+  worldBounds?: { xMin: number; xMax: number; yMin: number; yMax: number; zMin?: number; zMax?: number };
+  origin?: [number, number] | [number, number, number];
+  scale?: { pixelsPerUnit?: number; unitLabel?: string };
+  units?: Record<string, string>;
+  orientation?: { xAxis?: [number, number, number?]; yAxis?: [number, number, number?]; zAxis?: [number, number, number?] };
+  viewport?: { zoom: number; pan: [number, number]; camera?: 'orthographic' | 'perspective' };
+  layers?: Array<{ id: string; name: string; zIndex: number; visible: boolean }>;
+  rules?: string[];
+  assumptions?: string[];
+};
+
+export type ModelContract = {
+  domain: 'math' | 'physics' | 'chemistry' | 'biology' | 'computation' | 'statistics';
+  concept: string;
+  learningGoal: string;
+  fidelityLevel: 'conceptual' | 'quantitative' | 'dynamic' | 'spatial' | 'high_fidelity_simplified';
+  preserves: string[];
+  assumptions: string[];
+  limitations: string[];
+  nonGoals: string[];
+};
+
+export type ShapeSpec = {
+  id: string;
+  environmentId: string;
+  type: 'point2d' | 'segment2d' | 'bar' | 'circle' | 'polygon' | 'vector2d' | 'axis2d' | 'curve2d' | 'connector' | 'label' | 'particle2d' | 'region2d' | 'solid3dProjection';
+  dimension: '2d' | '3d';
+  transform?: {
+    position?: [number, number] | [number, number, number];
+    rotation?: number;
+    scale?: [number, number] | [number, number, number];
+    layerId?: string;
+  };
+  geometry?: Record<string, unknown>;
+  properties?: Record<string, unknown>;
+  semantic?: {
+    role?: string;
+    domain?: 'math' | 'physics' | 'chemistry' | 'biology' | 'computation' | 'statistics';
+    tags?: string[];
+    explainable?: boolean;
+  };
+  interaction?: {
+    draggable?: boolean;
+    clickable?: boolean;
+    selectable?: boolean;
+  };
+};
+
+export type RelationSpecV2 = {
+  id: string;
+  environmentId: string;
+  type: 'visual_connection' | 'functional_dependency' | 'geometric_relation' | 'conservation' | 'flow';
+  from: string[];
+  to?: string[];
+  expression?: string;
+  active: boolean;
+  semantic?: { role?: string; explanationHint?: string };
+};
+
+export type InvariantSpecV2 = {
+  id: string;
+  statement: string;
+  dependsOn: string[];
+  status: 'active' | 'broken' | 'unknown';
+  scope: 'currentModel' | 'idealizedModel' | 'domainRule';
+};
+
+export type VariableSpecV2 = {
+  id: string;
+  label: string;
+  value: number | string | boolean;
+  unit?: string;
+  min?: number;
+  max?: number;
+  step?: number;
+};
+
+export type BuildCommand =
+  | { type: 'createEnvironment'; environment: EnvironmentSpec }
+  | { type: 'createShape'; shape: ShapeSpec }
+  | { type: 'setTransform'; targetId: string; transform: ShapeSpec['transform'] }
+  | { type: 'setProperty'; targetId: string; key: string; value: unknown; unit?: string }
+  | { type: 'addRelation'; relation: RelationSpecV2 }
+  | { type: 'removeRelation'; relationId: string; reason?: string }
+  | { type: 'deriveInvariant'; invariant: InvariantSpecV2 }
+  | { type: 'focusCamera'; environmentId: string; viewport: EnvironmentSpec['viewport'] }
+  | { type: 'compareStates'; beforeStep: number; afterStep: number; label?: string }
+  | { type: 'askPrediction'; prompt: string; expectedFocus?: string[] };
+
+export type EngineSceneEvent = {
+  id: string;
+  step: number;
+  command: BuildCommand;
+  status: 'applied' | 'rejected' | 'repaired';
+  timestamp: number;
+  message?: string;
+};
+
+export type EngineSceneState = {
+  id: string;
+  title: string;
+  modelContract: ModelContract;
+  environments: Record<string, EnvironmentSpec>;
+  shapes: Record<string, ShapeSpec>;
+  variables: Record<string, VariableSpecV2>;
+  relations: Record<string, RelationSpecV2>;
+  constraints: Record<string, SceneConstraint>;
+  invariants: Record<string, InvariantSpecV2>;
+  currentStep: number;
+  eventLog: EngineSceneEvent[];
+};
+
 export type SceneVariable = {
   id: string;
   label?: string;
@@ -134,6 +260,9 @@ export type SceneSpec = {
   invariants: { id: string; description: string }[];
   construction_events: SceneEvent[];
   click_explanations: Record<string, string>;
+  modelContract?: ModelContract;
+  environments?: EnvironmentSpec[];
+  buildCommands?: BuildCommand[];
 };
 
 export type SceneIssue = {
@@ -144,6 +273,7 @@ export type SceneIssue = {
 
 export type SceneState = {
   scene: SceneSpec;
+  engine: EngineSceneState;
   objects: SceneObject[];
   visibleIds: Set<string>;
   issues: SceneIssue[];
